@@ -71,20 +71,10 @@ export default function ImportsPage() {
         </p>
       </div>
 
-      {/* Drop zone */}
+      {/* Upload zone */}
       {!preview && (
-        <div
-          onDragOver={e => { e.preventDefault(); setDragging(true) }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={onDrop}
-          onClick={() => inputRef.current?.click()}
-          className={clsx(
-            'border-2 border-dashed rounded-2xl p-10 flex flex-col items-center justify-center cursor-pointer transition-colors mb-6',
-            dragging
-              ? 'border-emerald-400 bg-emerald-500/5'
-              : 'border-slate-700 hover:border-slate-600 bg-slate-900'
-          )}
-        >
+        <div className="mb-6">
+          {/* Hidden file input */}
           <input
             ref={inputRef}
             type="file"
@@ -92,19 +82,41 @@ export default function ImportsPage() {
             className="hidden"
             onChange={e => { const f = e.target.files?.[0]; if (f) processFile(f); e.target.value = '' }}
           />
-          {parsing ? (
-            <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-3" />
-          ) : (
-            <Upload className="w-10 h-10 text-slate-600 mb-3" />
-          )}
-          <p className="text-white font-medium text-sm mb-1">
-            {parsing ? 'Processando...' : 'Arraste o arquivo ou clique para selecionar'}
-          </p>
-          <p className="text-slate-500 text-xs">CSV ou OFX — exportado pelo app do seu banco</p>
+
+          {/* Mobile-first: big tap target button */}
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={parsing}
+            onDragOver={e => { e.preventDefault(); setDragging(true) }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
+            className={clsx(
+              'w-full border-2 border-dashed rounded-2xl py-10 px-6 flex flex-col items-center justify-center transition-colors',
+              dragging
+                ? 'border-emerald-400 bg-emerald-500/5'
+                : 'border-slate-700 hover:border-slate-500 bg-slate-900 active:bg-slate-800'
+            )}
+          >
+            {parsing ? (
+              <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-3" />
+            ) : (
+              <Upload className="w-10 h-10 text-slate-500 mb-3" />
+            )}
+            <p className="text-white font-semibold text-base mb-1">
+              {parsing ? 'Processando...' : 'Selecionar arquivo'}
+            </p>
+            <p className="text-slate-500 text-sm text-center">
+              {parsing ? '' : 'CSV ou OFX — exportado pelo app do banco'}
+            </p>
+            <p className="text-slate-600 text-xs mt-1 hidden sm:block">
+              Ou arraste o arquivo aqui
+            </p>
+          </button>
 
           {parseError && (
-            <div className="mt-4 flex items-center gap-2 text-red-400 text-sm">
-              <AlertCircle className="w-4 h-4" />
+            <div className="mt-3 flex items-center gap-2 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+              <AlertCircle className="w-4 h-4 shrink-0" />
               {parseError}
             </div>
           )}
@@ -114,60 +126,45 @@ export default function ImportsPage() {
       {/* Preview before confirm */}
       {preview && (
         <div className="bg-slate-900 border border-slate-800 rounded-2xl mb-6">
-          <div className="flex items-center justify-between p-5 border-b border-slate-800">
-            <div>
-              <p className="text-white font-semibold text-sm">{preview.name}</p>
-              <p className="text-slate-400 text-xs mt-0.5">{preview.rows.length} transações encontradas</p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setPreview(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-medium rounded-lg text-sm transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={confirmImport}
-                disabled={importTransactions.isPending}
-                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-white font-medium rounded-lg text-sm transition-colors"
-              >
-                {importTransactions.isPending ? 'Importando...' : 'Confirmar importação'}
-              </button>
-            </div>
+          <div className="p-4 border-b border-slate-800">
+            <p className="text-white font-semibold text-sm truncate">{preview.name}</p>
+            <p className="text-slate-400 text-xs mt-0.5">{preview.rows.length} transações encontradas</p>
           </div>
 
-          <div className="overflow-x-auto max-h-72">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-slate-900">
-                <tr>
-                  <th className="text-left py-2 px-4 text-slate-500 font-medium text-xs">Data</th>
-                  <th className="text-left py-2 px-4 text-slate-500 font-medium text-xs">Descrição</th>
-                  <th className="text-right py-2 px-4 text-slate-500 font-medium text-xs">Valor</th>
-                  <th className="text-center py-2 px-4 text-slate-500 font-medium text-xs">Tipo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {preview.rows.slice(0, 50).map((row, i) => (
-                  <tr key={i} className="border-t border-slate-800/50">
-                    <td className="py-2 px-4 text-slate-400 text-xs whitespace-nowrap">{formatDate(row.date)}</td>
-                    <td className="py-2 px-4 text-slate-300 text-xs max-w-xs truncate">{row.description}</td>
-                    <td className={clsx('py-2 px-4 text-xs text-right font-medium', row.type === 'credit' ? 'text-emerald-400' : 'text-red-400')}>
-                      {formatCurrency(row.amount)}
-                    </td>
-                    <td className="py-2 px-4 text-center">
-                      <span className={clsx('text-xs px-1.5 py-0.5 rounded', row.type === 'credit' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400')}>
-                        {row.type === 'credit' ? 'Crédito' : 'Débito'}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* Transaction preview — card list (mobile) */}
+          <div className="divide-y divide-slate-800/50 max-h-64 overflow-y-auto">
+            {preview.rows.slice(0, 50).map((row, i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-2.5">
+                <div className="flex-1 min-w-0">
+                  <p className="text-slate-200 text-xs font-medium truncate">{row.description}</p>
+                  <p className="text-slate-500 text-xs mt-0.5">{formatDate(row.date)}</p>
+                </div>
+                <span className={clsx('text-xs font-semibold shrink-0', row.type === 'credit' ? 'text-emerald-400' : 'text-red-400')}>
+                  {row.type === 'debit' ? '-' : '+'}{formatCurrency(row.amount)}
+                </span>
+              </div>
+            ))}
             {preview.rows.length > 50 && (
               <p className="text-center text-xs text-slate-500 py-3">
                 ... e mais {preview.rows.length - 50} transações
               </p>
             )}
+          </div>
+
+          <div className="flex gap-3 p-4 border-t border-slate-800">
+            <button
+              onClick={() => setPreview(null)}
+              className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-medium rounded-lg text-sm transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={confirmImport}
+              disabled={importTransactions.isPending}
+              className="flex-1 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-white font-medium rounded-lg text-sm transition-colors"
+            >
+              {importTransactions.isPending ? 'Importando...' : 'Confirmar'}
+            </button>
           </div>
         </div>
       )}
@@ -231,43 +228,26 @@ function ImportAccordion({ importRecord, open, onToggle }: {
       </button>
 
       {open && (
-        <div className="border-t border-slate-800">
+        <div className="border-t border-slate-800 divide-y divide-slate-800/50 max-h-[28rem] overflow-y-auto">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
             </div>
-          ) : (
-            <div className="overflow-x-auto max-h-96">
-              <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-slate-900 border-b border-slate-800">
-                  <tr>
-                    <th className="text-left py-2 px-4 text-slate-500 font-medium text-xs">Data</th>
-                    <th className="text-left py-2 px-4 text-slate-500 font-medium text-xs">Descrição</th>
-                    <th className="text-right py-2 px-4 text-slate-500 font-medium text-xs">Valor</th>
-                    <th className="text-left py-2 px-4 text-slate-500 font-medium text-xs">Vincular à conta</th>
-                    <th className="text-center py-2 px-4 text-slate-500 font-medium text-xs">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactions.map(tx => (
-                    <TransactionRow
-                      key={tx.id}
-                      transaction={tx}
-                      bills={bills}
-                      entries={entries}
-                      onMatch={async (entryId) => {
-                        await matchTransaction.mutateAsync({
-                          transactionId: tx.id,
-                          billEntryId: entryId,
-                          importId: importRecord.id,
-                        })
-                      }}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          ) : transactions.map(tx => (
+            <TransactionRow
+              key={tx.id}
+              transaction={tx}
+              bills={bills}
+              entries={entries}
+              onMatch={async (entryId) => {
+                await matchTransaction.mutateAsync({
+                  transactionId: tx.id,
+                  billEntryId: entryId,
+                  importId: importRecord.id,
+                })
+              }}
+            />
+          ))}
         </div>
       )}
     </div>
@@ -282,7 +262,6 @@ function TransactionRow({ transaction, bills, entries, onMatch }: {
 }) {
   const now = new Date()
 
-  // Auto-suggest: find bills whose name fuzzy-matches the description
   const desc = transaction.description.toLowerCase()
   const suggestions = (bills ?? []).filter(b =>
     b.type === 'expense' && b.name.toLowerCase().split(' ').some(word => word.length > 3 && desc.includes(word))
@@ -292,46 +271,50 @@ function TransactionRow({ transaction, bills, entries, onMatch }: {
   const matchedBill = matchedEntry ? bills?.find(b => b.id === matchedEntry.bill_id) : null
 
   return (
-    <tr className={clsx('border-t border-slate-800/50', transaction.is_reconciled && 'opacity-60')}>
-      <td className="py-2.5 px-4 text-slate-400 text-xs whitespace-nowrap">{formatDate(transaction.date)}</td>
-      <td className="py-2.5 px-4 text-slate-300 text-xs max-w-[180px] truncate">{transaction.description}</td>
-      <td className={clsx('py-2.5 px-4 text-xs text-right font-medium whitespace-nowrap',
-        transaction.type === 'credit' ? 'text-emerald-400' : 'text-red-400')}>
-        {transaction.type === 'debit' ? '-' : '+'}{formatCurrency(transaction.amount)}
-      </td>
-      <td className="py-2.5 px-4">
-        {transaction.is_reconciled ? (
-          <span className="text-xs text-emerald-400">{matchedBill?.name ?? 'Vinculada'}</span>
-        ) : (
-          <select
-            defaultValue=""
-            onChange={e => onMatch(e.target.value || null)}
-            className="text-xs bg-slate-800 border border-slate-700 rounded-lg px-2 py-1 text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 max-w-[160px]"
-          >
-            <option value="">Selecionar conta...</option>
-            {suggestions.length > 0 && (
-              <optgroup label="Sugestões">
-                {suggestions.map(b => {
-                  const entry = entries?.find(e => e.bill_id === b.id && e.month === now.getMonth() + 1 && e.year === now.getFullYear())
-                  return <option key={b.id} value={entry?.id ?? ''}>{b.name}</option>
-                })}
-              </optgroup>
-            )}
-            <optgroup label="Todas as contas">
-              {(bills ?? []).filter(b => b.type === 'expense').map(b => {
+    <div className={clsx('px-4 py-3 space-y-2', transaction.is_reconciled && 'opacity-60')}>
+      {/* Top row: description + amount + reconcile indicator */}
+      <div className="flex items-start gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="text-slate-200 text-xs font-medium truncate">{transaction.description}</p>
+          <p className="text-slate-500 text-xs mt-0.5">{formatDate(transaction.date)}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={clsx('text-xs font-semibold', transaction.type === 'credit' ? 'text-emerald-400' : 'text-red-400')}>
+            {transaction.type === 'debit' ? '-' : '+'}{formatCurrency(transaction.amount)}
+          </span>
+          {transaction.is_reconciled
+            ? <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            : <Circle className="w-4 h-4 text-slate-700" />
+          }
+        </div>
+      </div>
+
+      {/* Match selector */}
+      {transaction.is_reconciled ? (
+        <p className="text-xs text-emerald-400">Vinculada: {matchedBill?.name ?? '—'}</p>
+      ) : (
+        <select
+          defaultValue=""
+          onChange={e => onMatch(e.target.value || null)}
+          className="w-full text-xs bg-slate-800 border border-slate-700 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+        >
+          <option value="">Vincular à conta...</option>
+          {suggestions.length > 0 && (
+            <optgroup label="Sugestões">
+              {suggestions.map(b => {
                 const entry = entries?.find(e => e.bill_id === b.id && e.month === now.getMonth() + 1 && e.year === now.getFullYear())
                 return <option key={b.id} value={entry?.id ?? ''}>{b.name}</option>
               })}
             </optgroup>
-          </select>
-        )}
-      </td>
-      <td className="py-2.5 px-4 text-center">
-        {transaction.is_reconciled
-          ? <CheckCircle2 className="w-4 h-4 text-emerald-400 mx-auto" />
-          : <Circle className="w-4 h-4 text-slate-700 mx-auto" />
-        }
-      </td>
-    </tr>
+          )}
+          <optgroup label="Todas as contas">
+            {(bills ?? []).filter(b => b.type === 'expense').map(b => {
+              const entry = entries?.find(e => e.bill_id === b.id && e.month === now.getMonth() + 1 && e.year === now.getFullYear())
+              return <option key={b.id} value={entry?.id ?? ''}>{b.name}</option>
+            })}
+          </optgroup>
+        </select>
+      )}
+    </div>
   )
 }
