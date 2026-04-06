@@ -10,6 +10,7 @@ import { formatCurrency, RECURRENCE_LABELS } from '../lib/formatters'
 import type { Bill, Category } from '../types/database'
 
 type FilterType = 'all' | 'expense' | 'revenue'
+type SortType = 'default' | 'name_asc' | 'name_desc' | 'value_asc' | 'value_desc'
 
 export default function BillsPage() {
   const { data: bills = [], isLoading } = useBills()
@@ -20,17 +21,28 @@ export default function BillsPage() {
 
   const [search, setSearch] = useState('')
   const [filterType, setFilterType] = useState<FilterType>('all')
+  const [filterCategory, setFilterCategory] = useState<string>('all')
+  const [sortBy, setSortBy] = useState<SortType>('default')
   const [showInactive, setShowInactive] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingBill, setEditingBill] = useState<Bill | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-  const filtered = bills.filter(b => {
-    if (!showInactive && !b.is_active) return false
-    if (filterType !== 'all' && b.type !== filterType) return false
-    if (search && !b.name.toLowerCase().includes(search.toLowerCase())) return false
-    return true
-  })
+  const filtered = bills
+    .filter(b => {
+      if (!showInactive && !b.is_active) return false
+      if (filterType !== 'all' && b.type !== filterType) return false
+      if (filterCategory !== 'all' && b.category_id !== filterCategory) return false
+      if (search && !b.name.toLowerCase().includes(search.toLowerCase())) return false
+      return true
+    })
+    .sort((a, b) => {
+      if (sortBy === 'name_asc') return a.name.localeCompare(b.name, 'pt-BR')
+      if (sortBy === 'name_desc') return b.name.localeCompare(a.name, 'pt-BR')
+      if (sortBy === 'value_asc') return a.expected_amount - b.expected_amount
+      if (sortBy === 'value_desc') return b.expected_amount - a.expected_amount
+      return 0
+    })
 
   const expenses = filtered.filter(b => b.type === 'expense')
   const revenues = filtered.filter(b => b.type === 'revenue')
@@ -83,50 +95,83 @@ export default function BillsPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        {/* Search */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar conta..."
-            className="w-full pl-9 pr-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
-          />
+      <div className="flex flex-col gap-3 mb-6">
+        {/* Row 1: search + type filter */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Search */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar conta..."
+              className="w-full pl-9 pr-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
+            />
+          </div>
+
+          {/* Type filter */}
+          <div className="flex rounded-lg border border-slate-700 overflow-hidden">
+            {([['all', 'Todas'], ['expense', 'Despesas'], ['revenue', 'Receitas']] as const).map(([v, l]) => (
+              <button
+                key={v}
+                onClick={() => setFilterType(v)}
+                className={clsx(
+                  'px-3 py-2 text-sm transition-colors',
+                  filterType === v
+                    ? 'bg-slate-700 text-white'
+                    : 'text-slate-400 hover:text-white'
+                )}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Type filter */}
-        <div className="flex rounded-lg border border-slate-700 overflow-hidden">
-          {([['all', 'Todas'], ['expense', 'Despesas'], ['revenue', 'Receitas']] as const).map(([v, l]) => (
-            <button
-              key={v}
-              onClick={() => setFilterType(v)}
-              className={clsx(
-                'px-3 py-2 text-sm transition-colors',
-                filterType === v
-                  ? 'bg-slate-700 text-white'
-                  : 'text-slate-400 hover:text-white'
-              )}
+        {/* Row 2: category filter + sort + inactive toggle */}
+        <div className="flex flex-wrap gap-2">
+          {/* Category filter */}
+          {categories.length > 0 && (
+            <select
+              value={filterCategory}
+              onChange={e => setFilterCategory(e.target.value)}
+              className="flex-1 min-w-[140px] px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
-              {l}
-            </button>
-          ))}
-        </div>
-
-        {/* Show inactive */}
-        <button
-          onClick={() => setShowInactive(!showInactive)}
-          className={clsx(
-            'flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors',
-            showInactive
-              ? 'bg-slate-700 border-slate-600 text-white'
-              : 'border-slate-700 text-slate-400 hover:text-white'
+              <option value="all">Todas as categorias</option>
+              {categories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           )}
-        >
-          {showInactive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
-          Inativas
-        </button>
+
+          {/* Sort */}
+          <select
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value as SortType)}
+            className="flex-1 min-w-[140px] px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          >
+            <option value="default">Ordenar: padrão</option>
+            <option value="name_asc">Nome: A → Z</option>
+            <option value="name_desc">Nome: Z → A</option>
+            <option value="value_asc">Valor: menor → maior</option>
+            <option value="value_desc">Valor: maior → menor</option>
+          </select>
+
+          {/* Show inactive */}
+          <button
+            onClick={() => setShowInactive(!showInactive)}
+            className={clsx(
+              'flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors',
+              showInactive
+                ? 'bg-slate-700 border-slate-600 text-white'
+                : 'border-slate-700 text-slate-400 hover:text-white'
+            )}
+          >
+            {showInactive ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+            Inativas
+          </button>
+        </div>
       </div>
 
       {isLoading ? (
