@@ -220,9 +220,6 @@ function BillCheckItem({ item, expanded, onExpand, amount, onAmountChange, onTog
 
         {/* Amount + expand */}
         <div className="flex items-center gap-2 shrink-0">
-          {item.bill.pix_key && !isPaid && (
-            <PixCopyButton pixKey={item.bill.pix_key} pixKeyType={item.bill.pix_key_type} />
-          )}
           <span className={clsx('text-sm font-semibold', isPaid ? 'text-slate-500' : 'text-white')}>
             {formatCurrency(parseFloat(amount) || 0)}
           </span>
@@ -232,10 +229,20 @@ function BillCheckItem({ item, expanded, onExpand, amount, onAmountChange, onTog
         </div>
       </div>
 
-      {/* Expanded: amount editor */}
+      {/* Expanded panel */}
       {expanded && !isPaid && (
-        <div className="px-4 pb-3 flex items-center gap-3">
-          <div className="flex-1">
+        <div className="px-4 pb-4 space-y-3">
+          {/* PIX copy — prominent full-width */}
+          {item.bill.pix_key && (
+            <PixCopyButton
+              pixKey={item.bill.pix_key}
+              pixKeyType={item.bill.pix_key_type}
+              className="w-full justify-center py-2.5 text-sm"
+            />
+          )}
+
+          {/* Amount editor */}
+          <div>
             <label className="block text-xs text-slate-500 mb-1">Valor real (R$)</label>
             <input
               type="number"
@@ -246,12 +253,6 @@ function BillCheckItem({ item, expanded, onExpand, amount, onAmountChange, onTog
               className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
             />
           </div>
-          {item.bill.pix_key && (
-            <div className="mt-4">
-              <label className="block text-xs text-slate-500 mb-1">Chave PIX</label>
-              <PixCopyButton pixKey={item.bill.pix_key} pixKeyType={item.bill.pix_key_type} />
-            </div>
-          )}
         </div>
       )}
     </div>

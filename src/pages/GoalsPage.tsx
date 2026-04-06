@@ -48,18 +48,18 @@ export default function GoalsPage() {
 
       {/* Summary */}
       {goals.length > 0 && (
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-            <p className="text-xs text-slate-500 mb-1">Metas ativas</p>
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 sm:p-4 min-w-0">
+            <p className="text-xs text-slate-500 mb-1 truncate">Metas ativas</p>
             <p className="text-2xl font-bold text-white">{goals.length}</p>
           </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-            <p className="text-xs text-slate-500 mb-1">Total economizado</p>
-            <p className="text-xl font-bold text-emerald-400">{formatCurrency(totalSaved)}</p>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 sm:p-4 min-w-0">
+            <p className="text-xs text-slate-500 mb-1 truncate">Economizado</p>
+            <p className="text-sm sm:text-xl font-bold text-emerald-400 truncate">{formatCurrency(totalSaved)}</p>
           </div>
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-            <p className="text-xs text-slate-500 mb-1">Total necessário</p>
-            <p className="text-xl font-bold text-white">{formatCurrency(totalTargets)}</p>
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 sm:p-4 min-w-0">
+            <p className="text-xs text-slate-500 mb-1 truncate">Necessário</p>
+            <p className="text-sm sm:text-xl font-bold text-white truncate">{formatCurrency(totalTargets)}</p>
           </div>
         </div>
       )}

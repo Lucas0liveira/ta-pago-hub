@@ -7,13 +7,14 @@ interface CellEditPopoverProps {
   entry: BillEntry | undefined
   billName: string
   month: number
+  expectedAmount?: number
   onSave: (data: { actual_amount: number; status: BillEntry['status']; notes: string }) => Promise<void>
   onClose: () => void
 }
 
-export function CellEditPopover({ entry, billName, onSave, onClose }: CellEditPopoverProps) {
+export function CellEditPopover({ entry, billName, expectedAmount, onSave, onClose }: CellEditPopoverProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const [amount, setAmount] = useState(String(entry?.actual_amount ?? ''))
+  const [amount, setAmount] = useState(String(entry?.actual_amount ?? expectedAmount ?? ''))
   const [status, setStatus] = useState<BillEntry['status']>(entry?.status ?? 'pending')
   const [notes, setNotes] = useState(entry?.notes ?? '')
   const [loading, setLoading] = useState(false)

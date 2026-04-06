@@ -234,8 +234,6 @@ function BillRow({ bill, year, currentMonth, currentYear, getEntry, openCell, se
         const entry = getEntry(bill.id, month)
         const isOpen = openCell?.billId === bill.id && openCell.month === month
         const isCurrent = month === currentMonth && year === currentYear
-        const amount = entry?.actual_amount ?? bill.expected_amount
-        const status = entry?.status ?? 'pending'
 
         return (
           <td key={month} className="py-1 px-1 relative">
@@ -243,12 +241,15 @@ function BillRow({ bill, year, currentMonth, currentYear, getEntry, openCell, se
               onClick={() => setOpenCell(isOpen ? null : { billId: bill.id, month })}
               className={clsx(
                 'w-full py-1.5 px-1 rounded-lg text-xs text-center transition-colors font-medium',
-                STATUS_CELL[status],
+                entry ? STATUS_CELL[entry.status] : 'text-slate-600 hover:text-slate-400 hover:bg-slate-800/50',
                 isCurrent && 'ring-1 ring-emerald-500/40',
-                'hover:brightness-110'
+                entry && 'hover:brightness-110'
               )}
             >
-              {amount > 0 ? formatCurrency(amount) : '—'}
+              {entry
+                ? (entry.actual_amount > 0 ? formatCurrency(entry.actual_amount) : '—')
+                : '—'
+              }
             </button>
 
             {isOpen && (
@@ -256,6 +257,7 @@ function BillRow({ bill, year, currentMonth, currentYear, getEntry, openCell, se
                 entry={entry}
                 billName={bill.name}
                 month={month}
+                expectedAmount={bill.expected_amount}
                 onSave={(data) => onSave(bill.id, month, data)}
                 onClose={() => setOpenCell(null)}
               />
