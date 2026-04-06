@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, Trophy } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ChevronLeft, ChevronRight, Trophy, Calendar } from 'lucide-react'
 import { clsx } from 'clsx'
 import { usePaymentSession, useMarkSessionItemPaid, useCompleteSession } from '../hooks/usePaymentSessions'
 import { PixCopyButton } from '../components/bills/PixCopyButton'
@@ -31,16 +31,16 @@ export default function PaymentSessionPage() {
 
   const { session, items } = data
 
-  // Pending first, then paid — stable order so index stays valid across rerenders
   const orderedItems = [
     ...items.filter(i => i.entry.status !== 'paid'),
     ...items.filter(i => i.entry.status === 'paid'),
   ]
 
   const paidCount = items.filter(i => i.entry.status === 'paid').length
-  const totalPaid = items.filter(i => i.entry.status === 'paid').reduce((s, i) => s + i.entry.actual_amount, 0)
+  const totalPaid = items
+    .filter(i => i.entry.status === 'paid')
+    .reduce((s, i) => s + i.entry.actual_amount, 0)
   const progress = items.length > 0 ? (paidCount / items.length) * 100 : 0
-
   const safeIndex = Math.min(cardIndex, orderedItems.length - 1)
 
   async function handleMarkPaid(item: SessionBillItem) {
@@ -58,14 +58,11 @@ export default function PaymentSessionPage() {
       paid: !isPaid,
     })
 
-    // Auto-advance to next unpaid card after marking paid
     if (!isPaid) {
       const nextUnpaid = orderedItems.findIndex(
         (it, i) => i > safeIndex && it.entry.status !== 'paid'
       )
-      if (nextUnpaid !== -1) {
-        setTimeout(() => setCardIndex(nextUnpaid), 250)
-      }
+      if (nextUnpaid !== -1) setTimeout(() => setCardIndex(nextUnpaid), 250)
     }
   }
 
@@ -79,16 +76,16 @@ export default function PaymentSessionPage() {
   if (done) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 p-6 text-center">
-        <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">
-          <Trophy className="w-8 h-8 text-emerald-400" />
+        <div className="w-20 h-20 rounded-full bg-emerald-500/10 flex items-center justify-center mb-6">
+          <Trophy className="w-10 h-10 text-emerald-400" />
         </div>
         <h1 className="text-2xl font-bold text-white mb-2">Sessão concluída!</h1>
         <p className="text-slate-400 mb-1">{MONTH_NAMES[session.month - 1]} {session.year}</p>
-        <p className="text-3xl font-bold text-emerald-400 mt-4 mb-2">{formatCurrency(totalPaid)}</p>
-        <p className="text-slate-400 text-sm mb-8">{paidCount} de {items.length} contas pagas</p>
+        <p className="text-4xl font-bold text-emerald-400 mt-4 mb-2">{formatCurrency(totalPaid)}</p>
+        <p className="text-slate-400 text-sm mb-10">{paidCount} de {items.length} contas pagas</p>
         <button
           onClick={() => navigate('/pagamento')}
-          className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-medium rounded-xl text-sm transition-colors"
+          className="px-8 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold rounded-xl text-sm transition-colors"
         >
           Voltar para sessões
         </button>
@@ -97,22 +94,20 @@ export default function PaymentSessionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col max-w-lg mx-auto">
+    <div className="h-[100dvh] bg-slate-950 flex flex-col">
       {/* Header */}
-      <div className="px-4 pt-4 pb-3 border-b border-slate-800 shrink-0">
+      <div className="shrink-0 px-4 pt-4 pb-3 border-b border-slate-800 max-w-2xl mx-auto w-full">
         <div className="flex items-center gap-3 mb-3">
-          <button onClick={() => navigate('/pagamento')} className="text-slate-400 hover:text-white transition-colors">
+          <button onClick={() => navigate('/pagamento')} className="text-slate-400 hover:text-white transition-colors p-1">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="flex-1">
-            <h1 className="text-base font-semibold text-white">{MONTH_NAMES[session.month - 1]} {session.year}</h1>
-            <p className="text-xs text-slate-400">Dia do pagamento</p>
+            <h1 className="text-sm font-semibold text-white">{MONTH_NAMES[session.month - 1]} {session.year}</h1>
+            <p className="text-xs text-slate-500">Dia do pagamento</p>
           </div>
-          <span className="text-xs text-slate-400">{paidCount}/{items.length} pagas</span>
+          <span className="text-xs text-slate-400 tabular-nums">{paidCount}/{items.length} pagas</span>
         </div>
-
-        {/* Progress bar */}
-        <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
           <div
             className="h-full bg-emerald-500 rounded-full transition-all duration-500"
             style={{ width: `${progress}%` }}
@@ -120,30 +115,30 @@ export default function PaymentSessionPage() {
         </div>
       </div>
 
-      {/* Carousel */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Navigation row */}
-        <div className="flex items-center justify-between px-4 py-3 shrink-0">
+      {/* Carousel area */}
+      <div className="flex-1 flex flex-col overflow-hidden max-w-2xl mx-auto w-full">
+        {/* Nav + dots */}
+        <div className="shrink-0 flex items-center justify-between px-4 py-3">
           <button
             onClick={() => setCardIndex(i => Math.max(0, i - 1))}
             disabled={safeIndex === 0}
-            className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 disabled:opacity-30 transition-colors"
+            className="p-2 rounded-xl text-slate-500 hover:text-white hover:bg-slate-800 disabled:opacity-20 transition-colors"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
 
-          {/* Dot indicators */}
-          <div className="flex items-center gap-1.5 overflow-x-auto max-w-[200px] px-1">
+          <div className="flex items-center gap-1.5 overflow-x-auto max-w-[240px] px-1 py-1">
             {orderedItems.map((item, i) => (
               <button
                 key={item.bill.id}
                 onClick={() => setCardIndex(i)}
+                title={item.bill.name}
                 className={clsx(
                   'shrink-0 rounded-full transition-all duration-200',
                   i === safeIndex
-                    ? 'w-4 h-2 bg-emerald-500'
+                    ? 'w-5 h-2 bg-emerald-500'
                     : item.entry.status === 'paid'
-                    ? 'w-2 h-2 bg-emerald-500/40'
+                    ? 'w-2 h-2 bg-emerald-500/30'
                     : 'w-2 h-2 bg-slate-600 hover:bg-slate-400'
                 )}
               />
@@ -153,17 +148,21 @@ export default function PaymentSessionPage() {
           <button
             onClick={() => setCardIndex(i => Math.min(orderedItems.length - 1, i + 1))}
             disabled={safeIndex === orderedItems.length - 1}
-            className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 disabled:opacity-30 transition-colors"
+            className="p-2 rounded-xl text-slate-500 hover:text-white hover:bg-slate-800 disabled:opacity-20 transition-colors"
           >
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Card area — slides with overflow hidden */}
+        {/* Sliding card track */}
         <div className="flex-1 px-4 pb-4 overflow-hidden">
           <div
             className="flex h-full transition-transform duration-300 ease-out"
-            style={{ transform: `translateX(calc(-${safeIndex} * 100% - ${safeIndex} * 1rem))`, width: `calc(${orderedItems.length} * 100% + ${orderedItems.length - 1} * 1rem)`, gap: '1rem' }}
+            style={{
+              transform: `translateX(calc(-${safeIndex} * (100% + 1rem)))`,
+              width: `calc(${orderedItems.length} * 100% + ${orderedItems.length - 1} * 1rem)`,
+              gap: '1rem',
+            }}
           >
             {orderedItems.map((item, i) => (
               <BillCard
@@ -182,18 +181,18 @@ export default function PaymentSessionPage() {
 
       {/* Footer */}
       {session.status === 'in_progress' && paidCount > 0 && (
-        <div className="px-4 py-4 border-t border-slate-800 shrink-0">
-          <div className="flex items-center justify-between mb-3 text-sm">
-            <span className="text-slate-400">Total pago</span>
-            <span className="text-emerald-400 font-semibold">{formatCurrency(totalPaid)}</span>
+        <div className="shrink-0 border-t border-slate-800 px-4 py-4 max-w-2xl mx-auto w-full">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm text-slate-400">Total pago</span>
+            <span className="text-sm font-semibold text-emerald-400">{formatCurrency(totalPaid)}</span>
           </div>
           <button
             onClick={handleComplete}
             disabled={completing}
             className="w-full flex items-center justify-center gap-2 py-3.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-white font-semibold rounded-xl text-sm transition-colors"
           >
-            <CheckCircle2 className="w-5 h-5" />
-            {completing ? 'Concluindo...' : `Concluir sessão · ${paidCount}/${items.length} pagas`}
+            <CheckCircle2 className="w-4 h-4" />
+            {completing ? 'Concluindo...' : `Concluir · ${paidCount}/${items.length} pagas`}
           </button>
         </div>
       )}
@@ -215,87 +214,113 @@ function BillCard({ item, isActive, amount, onAmountChange, onTogglePaid, loadin
   const isPaid = item.entry.status === 'paid'
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Focus amount field when card becomes active and is unpaid
   useEffect(() => {
-    if (isActive && !isPaid) {
-      setTimeout(() => inputRef.current?.focus(), 350)
-    }
+    if (isActive && !isPaid) setTimeout(() => inputRef.current?.focus(), 350)
   }, [isActive, isPaid])
 
   return (
-    <div
-      className={clsx(
-        'flex-shrink-0 w-full h-full flex flex-col rounded-2xl border transition-all duration-300',
-        isPaid
-          ? 'bg-slate-900/50 border-emerald-500/20'
-          : 'bg-slate-900 border-slate-800'
-      )}
-    >
-      {/* Bill info */}
-      <div className="flex-1 flex flex-col justify-center p-6 space-y-6">
-        {/* Name + paid badge */}
-        <div className="text-center">
-          {isPaid && (
-            <div className="flex items-center justify-center gap-1.5 text-emerald-400 text-xs font-medium mb-3">
-              <CheckCircle2 className="w-4 h-4" />
-              Paga
-            </div>
-          )}
-          <h2 className={clsx('text-2xl font-bold', isPaid ? 'text-slate-400 line-through' : 'text-white')}>
-            {item.bill.name}
-          </h2>
-          {item.bill.payee_name && (
-            <p className="text-slate-500 text-sm mt-1">{item.bill.payee_name}</p>
-          )}
-          {item.bill.due_day && (
-            <p className="text-slate-500 text-xs mt-0.5">Vence dia {item.bill.due_day}</p>
-          )}
-        </div>
-
-        {/* PIX button — prominent */}
-        {item.bill.pix_key && !isPaid && (
-          <PixCopyButton
-            pixKey={item.bill.pix_key}
-            pixKeyType={item.bill.pix_key_type}
-            className="w-full justify-center py-3 text-sm"
-          />
+    <div className="flex-shrink-0 w-full h-full flex items-center justify-center">
+      <div
+        className={clsx(
+          'w-full max-h-full flex flex-col rounded-2xl border transition-all duration-300 overflow-hidden',
+          'shadow-2xl',
+          isPaid
+            ? 'bg-slate-900/60 border-emerald-500/20'
+            : 'bg-slate-900 border-slate-700'
         )}
+      >
+        {/* Card header stripe */}
+        <div className={clsx(
+          'h-1.5 w-full shrink-0',
+          isPaid ? 'bg-emerald-500/30' : 'bg-emerald-500'
+        )} />
 
-        {/* Amount field */}
-        <div>
-          <label className="block text-xs text-slate-500 mb-1.5 text-center">Valor (R$)</label>
-          <input
-            ref={inputRef}
-            type="number"
-            min="0"
-            step="0.01"
-            value={amount}
-            onChange={e => onAmountChange(e.target.value)}
-            disabled={isPaid}
-            className={clsx(
-              'w-full px-4 py-3 rounded-xl border text-white text-xl font-semibold text-center focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors',
-              isPaid
-                ? 'bg-slate-800/50 border-slate-700/50 text-slate-500 cursor-not-allowed'
-                : 'bg-slate-800 border-slate-700'
+        {/* Content */}
+        <div className="flex-1 flex flex-col justify-between p-6 gap-5 overflow-y-auto">
+          {/* Bill identity */}
+          <div className="text-center space-y-1">
+            {isPaid && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-medium mb-2">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Paga
+              </div>
             )}
-          />
-        </div>
-      </div>
+            <h2 className={clsx(
+              'text-2xl font-bold leading-tight',
+              isPaid ? 'text-slate-500 line-through' : 'text-white'
+            )}>
+              {item.bill.name}
+            </h2>
+            {item.bill.payee_name && (
+              <p className="text-slate-400 text-sm">{item.bill.payee_name}</p>
+            )}
+            {item.bill.due_day && (
+              <div className="inline-flex items-center gap-1 text-slate-500 text-xs mt-1">
+                <Calendar className="w-3 h-3" />
+                Vence dia {item.bill.due_day}
+              </div>
+            )}
+          </div>
 
-      {/* CTA */}
-      <div className="p-6 pt-0 shrink-0">
-        <button
-          onClick={onTogglePaid}
-          disabled={loading}
-          className={clsx(
-            'w-full py-4 rounded-xl font-bold text-base transition-all duration-200',
-            isPaid
-              ? 'bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400'
-              : 'bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-white shadow-lg shadow-emerald-500/20'
+          {/* PIX — always shown when available */}
+          {item.bill.pix_key && (
+            <PixCopyButton
+              pixKey={item.bill.pix_key}
+              pixKeyType={item.bill.pix_key_type}
+              className="w-full justify-center py-3 text-sm"
+            />
           )}
-        >
-          {loading ? '...' : isPaid ? 'Desmarcar' : '✓ Pago!'}
-        </button>
+
+          {/* Amount */}
+          <div>
+            <label className="block text-xs text-slate-500 mb-2 text-center tracking-wide uppercase">
+              Valor (R$)
+            </label>
+            <input
+              ref={inputRef}
+              type="number"
+              min="0"
+              step="0.01"
+              value={amount}
+              onChange={e => onAmountChange(e.target.value)}
+              disabled={isPaid}
+              className={clsx(
+                'w-full px-4 py-3.5 rounded-xl border text-2xl font-bold text-center',
+                'focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors',
+                isPaid
+                  ? 'bg-slate-800/40 border-slate-700/40 text-slate-500 cursor-not-allowed'
+                  : 'bg-slate-800 border-slate-700 text-white'
+              )}
+            />
+            {!isPaid && item.bill.expected_amount !== parseFloat(amount) && (
+              <p className="text-xs text-slate-600 text-center mt-1.5">
+                Previsto: {formatCurrency(item.bill.expected_amount)}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="shrink-0 px-6 pb-6">
+          <button
+            onClick={onTogglePaid}
+            disabled={loading}
+            className={clsx(
+              'w-full py-4 rounded-xl font-bold text-base transition-all duration-200',
+              isPaid
+                ? 'bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400'
+                : 'bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] text-white shadow-lg shadow-emerald-500/20'
+            )}
+          >
+            {loading ? (
+              <span className="inline-block w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : isPaid ? (
+              'Desmarcar pagamento'
+            ) : (
+              '✓  Marcar como pago'
+            )}
+          </button>
+        </div>
       </div>
     </div>
   )

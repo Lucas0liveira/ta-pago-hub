@@ -268,18 +268,20 @@ function ImportAccordion({ importRecord, open, onToggle }: {
             </div>
           ) : (
             <>
-              {/* Credits summary — just a total, no labeling needed */}
+              {/* Credits summary bar — these are income, don't need bill labeling */}
               {credits.length > 0 && (
-                <div className="flex items-center justify-between px-4 py-2.5 bg-slate-800/40 border-b border-slate-800">
-                  <span className="text-xs text-slate-500">{credits.length} entrada{credits.length > 1 ? 's' : ''} (créditos)</span>
+                <div className="flex items-center justify-between px-4 py-2 bg-green-500/5 border-b border-slate-800">
+                  <span className="text-xs text-slate-500">
+                    {credits.length} entrada{credits.length > 1 ? 's' : ''} oculta{credits.length > 1 ? 's' : ''} — créditos não precisam ser vinculados a contas
+                  </span>
                   <span className="text-xs font-semibold text-green-400">
                     +{formatCurrency(credits.reduce((s, t) => s + t.amount, 0))}
                   </span>
                 </div>
               )}
 
-              {/* Debits — need labeling */}
-              <div className="divide-y divide-slate-800/50 max-h-[28rem] overflow-y-auto">
+              {/* Debits — sorted oldest→newest, need labeling */}
+              <div className="divide-y divide-slate-800/50 max-h-[32rem] overflow-y-auto">
                 {debits.length === 0 ? (
                   <p className="text-xs text-slate-500 text-center py-6">Nenhum débito neste extrato.</p>
                 ) : debits.map(tx => (
@@ -293,6 +295,7 @@ function ImportAccordion({ importRecord, open, onToggle }: {
                         transactionId: tx.id,
                         billEntryId: entryId,
                         importId: importRecord.id,
+                        description: tx.description,
                       })
                     }}
                   />

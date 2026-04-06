@@ -5,13 +5,21 @@ type RawTransaction = Omit<BankTransaction, 'id' | 'import_id' | 'matched_bill_e
 // Detect bank format from headers
 type BankFormat = 'nubank' | 'inter' | 'itau' | 'bradesco' | 'bb' | 'generic'
 
+// Normalise: strip accents, lowercase, trim — so DESCRICAO == descrição == Descrição
+function norm(s: string) {
+  return s.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+}
+
 function detectFormat(headers: string[]): BankFormat {
-  const h = headers.map(h => h.toLowerCase().trim())
-  if (h.includes('categoria') && h.includes('título')) return 'nubank'
-  if (h.includes('histórico') && h.includes('data')) return 'itau'
-  if (h.includes('lançamento') || h.includes('lançamentos')) return 'bradesco'
-  if (h.includes('dependência origem') || h.includes('número do documento')) return 'bb'
-  if (h.includes('descrição') && h.includes('valor')) return 'inter'
+  const h = headers.map(norm)
+  if (h.includes('categoria') && (h.includes('titulo') || h.includes('title'))) return 'nubank'
+  if (h.includes('historico') && h.includes('data')) return 'itau'
+  if (h.includes('lancamento') || h.includes('lancamentos')) return 'bradesco'
+  if (h.includes('dependencia origem') || h.includes('numero do documento')) return 'bb'
+  // Inter: "Data Lançamento / Descrição / Valor / Tipo" — requires a 'tipo' column
+  // AND description must use the accented 'descrição' spelling (Inter exports UTF-8)
+  // We deliberately exclude files that have a UUID/transaction-code first column
+  if (h.includes('descricao') && h.includes('valor') && h.includes('tipo') && !h.some(c => c.includes('codigo') || c.includes('transacao'))) return 'inter'
   return 'generic'
 }
 
@@ -85,53 +93,50 @@ function parseRow(
   format: BankFormat,
   get: (i: number) => string
 ): RawTransaction {
-  const idx = (name: string) => headers.findIndex(h => h.toLowerCase().trim().includes(name.toLowerCase()))
+  // Match by normalised name (strips accents, lowercase)
+  const idx = (name: string) => headers.findIndex(h => norm(h).includes(norm(name)))
+  // Try multiple column name candidates, return first match
+  const idxAny = (...names: string[]) => {
+    for (const n of names) { const i = idx(n); if (i >= 0) return i }
+    return -1
+  }
 
   switch (format) {
     case 'nubank': {
-      // Date, Category, Title, Amount
       const dateCol = idx('data')
-      const descCol = idx('título')
-      const amtCol = idx('valor')
+      const descCol = idxAny('titulo', 'title', 'descricao', 'descr')
+      const amtCol  = idx('valor')
       const { amount, type } = parseBRAmount(get(amtCol))
-      return {
-        date: parseBRDate(get(dateCol)),
-        description: get(descCol),
-        amount,
-        type,
-      }
+      return { date: parseBRDate(get(dateCol)), description: get(descCol), amount, type }
     }
 
     case 'inter': {
-      // Data Lançamento, Descrição, Valor, Tipo
       const dateCol = idx('data')
-      const descCol = idx('descrição')
-      const amtCol = idx('valor')
+      const descCol = idxAny('descricao', 'descr', 'historico')
+      const amtCol  = idx('valor')
       const typeCol = idx('tipo')
+      const rawAmt  = get(amtCol).replace(/[R$\s.]/g, '').replace(',', '.')
+      const num     = parseFloat(rawAmt)
       const rawType = get(typeCol).toLowerCase()
+      // Prefer TIPO column; fall back to amount sign if TIPO is ambiguous
+      const type: 'credit' | 'debit' =
+        rawType.includes('cred') ? 'credit' :
+        rawType.includes('deb')  ? 'debit'  :
+        !isNaN(num) ? (num >= 0 ? 'credit' : 'debit') : 'debit'
       return {
         date: parseBRDate(get(dateCol)),
         description: get(descCol),
-        amount: Math.abs(parseFloat(get(amtCol).replace(/[R$\s.]/g, '').replace(',', '.')) || 0),
-        type: rawType.includes('créd') ? 'credit' : 'debit',
+        amount: Math.abs(num) || 0,
+        type,
       }
     }
 
     default: {
-      // Generic: try common column names
       const dateCol = idx('data')
-      const descCol = idx('descrição') >= 0 ? idx('descrição') : idx('histórico')
-      const amtCol = idx('valor') >= 0 ? idx('valor') : idx('amount')
-
-      const rawAmt = get(amtCol)
-      const { amount, type } = parseBRAmount(rawAmt)
-
-      return {
-        date: parseBRDate(get(dateCol)),
-        description: get(descCol),
-        amount,
-        type,
-      }
+      const descCol = idxAny('descricao', 'descr', 'historico', 'lancamento', 'memo')
+      const amtCol  = idxAny('valor', 'amount', 'debito', 'credito')
+      const { amount, type } = parseBRAmount(get(amtCol))
+      return { date: parseBRDate(get(dateCol)), description: get(descCol), amount, type }
     }
   }
 }

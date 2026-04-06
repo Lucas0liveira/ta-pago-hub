@@ -30,7 +30,7 @@ export function useBankTransactions(importId: string | null) {
         .from('bank_transactions')
         .select('*')
         .eq('import_id', importId!)
-        .order('date', { ascending: false })
+        .order('date', { ascending: true })
       if (error) throw error
       return data as BankTransaction[]
     },
@@ -103,11 +103,13 @@ export function useMatchTransaction() {
   const qc = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ transactionId, billEntryId }: {
+    mutationFn: async ({ transactionId, billEntryId, importId, description }: {
       transactionId: string
       billEntryId: string | null
       importId: string
+      description: string
     }) => {
+      // Link the chosen transaction
       const { error } = await supabase
         .from('bank_transactions')
         .update({
@@ -116,6 +118,18 @@ export function useMatchTransaction() {
         })
         .eq('id', transactionId)
       if (error) throw error
+
+      // Auto-link all other unreconciled transactions in the same import
+      // with the exact same description
+      if (billEntryId && description) {
+        await supabase
+          .from('bank_transactions')
+          .update({ matched_bill_entry_id: billEntryId, is_reconciled: true })
+          .eq('import_id', importId)
+          .eq('description', description)
+          .eq('is_reconciled', false)
+          .neq('id', transactionId)
+      }
     },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['bank_transactions', vars.importId] })
