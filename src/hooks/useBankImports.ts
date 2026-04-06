@@ -76,6 +76,29 @@ export function useImportTransactions() {
   })
 }
 
+export function useDeleteImport() {
+  const qc = useQueryClient()
+  const { activeFinancialProfileId } = useAuth()
+
+  return useMutation({
+    mutationFn: async (importId: string) => {
+      // Cascade: delete transactions first, then the import record
+      const { error: txError } = await supabase
+        .from('bank_transactions')
+        .delete()
+        .eq('import_id', importId)
+      if (txError) throw txError
+
+      const { error } = await supabase
+        .from('bank_imports')
+        .delete()
+        .eq('id', importId)
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['bank_imports', activeFinancialProfileId] }),
+  })
+}
+
 export function useMatchTransaction() {
   const qc = useQueryClient()
 

@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
-import { Upload, FileText, ChevronDown, ChevronUp, CheckCircle2, Circle, AlertCircle } from 'lucide-react'
+import { Upload, FileText, ChevronDown, ChevronUp, CheckCircle2, Circle, AlertCircle, Trash2 } from 'lucide-react'
 import { clsx } from 'clsx'
-import { useBankImports, useBankTransactions, useImportTransactions, useMatchTransaction } from '../hooks/useBankImports'
+import { useBankImports, useBankTransactions, useImportTransactions, useMatchTransaction, useDeleteImport } from '../hooks/useBankImports'
 import { useBillEntries } from '../hooks/useBillEntries'
 import { useBills } from '../hooks/useBills'
 import { parseCSV, parseOFX } from '../lib/csvParser'
@@ -207,47 +207,99 @@ function ImportAccordion({ importRecord, open, onToggle }: {
   const currentYear = new Date().getFullYear()
   const { data: entries = [] } = useBillEntries(currentYear)
   const matchTransaction = useMatchTransaction()
+  const deleteImport = useDeleteImport()
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
-  const reconciled = transactions.filter(t => t.is_reconciled).length
+  // Only debits need labeling — credits are just incoming totals
+  const debits = transactions.filter(t => t.type === 'debit')
+  const credits = transactions.filter(t => t.type === 'credit')
+  const reconciled = debits.filter(t => t.is_reconciled).length
+
+  async function handleDelete() {
+    await deleteImport.mutateAsync(importRecord.id)
+  }
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden">
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center gap-4 p-4 text-left hover:bg-slate-800/50 transition-colors"
-      >
-        <FileText className="w-5 h-5 text-slate-500 shrink-0" />
-        <div className="flex-1 min-w-0">
-          <p className="text-white font-medium text-sm">{importRecord.file_name}</p>
-          <p className="text-slate-500 text-xs mt-0.5">
-            {formatDate(importRecord.imported_at)} · {importRecord.row_count} transações
-            {transactions.length > 0 && ` · ${reconciled}/${transactions.length} reconciliadas`}
-          </p>
-        </div>
-        {open ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
-      </button>
+      {/* Header row */}
+      <div className="flex items-center gap-3 p-4">
+        <button onClick={onToggle} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+          <FileText className="w-5 h-5 text-slate-500 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-white font-medium text-sm truncate">{importRecord.file_name}</p>
+            <p className="text-slate-500 text-xs mt-0.5">
+              {formatDate(importRecord.imported_at)} · {importRecord.row_count} transações
+              {debits.length > 0 && ` · ${reconciled}/${debits.length} débitos vinculados`}
+            </p>
+          </div>
+          {open ? <ChevronUp className="w-4 h-4 text-slate-500 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />}
+        </button>
+
+        {/* Delete */}
+        {confirmDelete ? (
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => setConfirmDelete(false)} className="text-xs text-slate-400 hover:text-white px-2 py-1">
+              Cancelar
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={deleteImport.isPending}
+              className="text-xs bg-red-500 hover:bg-red-400 text-white px-2 py-1 rounded-lg transition-colors"
+            >
+              {deleteImport.isPending ? '...' : 'Confirmar'}
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="p-1.5 text-slate-600 hover:text-red-400 transition-colors shrink-0"
+            title="Excluir extrato"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
 
       {open && (
-        <div className="border-t border-slate-800 divide-y divide-slate-800/50 max-h-[28rem] overflow-y-auto">
+        <div className="border-t border-slate-800">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
               <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
             </div>
-          ) : transactions.map(tx => (
-            <TransactionRow
-              key={tx.id}
-              transaction={tx}
-              bills={bills}
-              entries={entries}
-              onMatch={async (entryId) => {
-                await matchTransaction.mutateAsync({
-                  transactionId: tx.id,
-                  billEntryId: entryId,
-                  importId: importRecord.id,
-                })
-              }}
-            />
-          ))}
+          ) : (
+            <>
+              {/* Credits summary — just a total, no labeling needed */}
+              {credits.length > 0 && (
+                <div className="flex items-center justify-between px-4 py-2.5 bg-slate-800/40 border-b border-slate-800">
+                  <span className="text-xs text-slate-500">{credits.length} entrada{credits.length > 1 ? 's' : ''} (créditos)</span>
+                  <span className="text-xs font-semibold text-green-400">
+                    +{formatCurrency(credits.reduce((s, t) => s + t.amount, 0))}
+                  </span>
+                </div>
+              )}
+
+              {/* Debits — need labeling */}
+              <div className="divide-y divide-slate-800/50 max-h-[28rem] overflow-y-auto">
+                {debits.length === 0 ? (
+                  <p className="text-xs text-slate-500 text-center py-6">Nenhum débito neste extrato.</p>
+                ) : debits.map(tx => (
+                  <TransactionRow
+                    key={tx.id}
+                    transaction={tx}
+                    bills={bills}
+                    entries={entries}
+                    onMatch={async (entryId) => {
+                      await matchTransaction.mutateAsync({
+                        transactionId: tx.id,
+                        billEntryId: entryId,
+                        importId: importRecord.id,
+                      })
+                    }}
+                  />
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -275,12 +327,13 @@ function TransactionRow({ transaction, bills, entries, onMatch }: {
       {/* Top row: description + amount + reconcile indicator */}
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
-          <p className="text-slate-200 text-xs font-medium truncate">{transaction.description}</p>
+          {/* No truncate — show full raw bank description so user can identify the bill */}
+          <p className="text-slate-200 text-xs font-medium break-words">{transaction.description}</p>
           <p className="text-slate-500 text-xs mt-0.5">{formatDate(transaction.date)}</p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className={clsx('text-xs font-semibold', transaction.type === 'credit' ? 'text-emerald-400' : 'text-red-400')}>
-            {transaction.type === 'debit' ? '-' : '+'}{formatCurrency(transaction.amount)}
+          <span className="text-xs font-semibold text-red-400">
+            -{formatCurrency(transaction.amount)}
           </span>
           {transaction.is_reconciled
             ? <CheckCircle2 className="w-4 h-4 text-emerald-400" />
