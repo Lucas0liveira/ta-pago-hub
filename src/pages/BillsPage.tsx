@@ -291,7 +291,7 @@ function BillSection({ title, bills, onEdit, onDelete, onToggleActive }: BillSec
             {/* Color indicator */}
             <div className={clsx(
               'w-1 self-stretch rounded-full shrink-0',
-              isRevenue ? 'bg-emerald-500' : 'bg-red-500'
+              isRevenue ? 'bg-green-500' : 'bg-red-500'
             )} />
 
             {/* Info */}
@@ -323,7 +323,7 @@ function BillSection({ title, bills, onEdit, onDelete, onToggleActive }: BillSec
             <div className="text-right shrink-0">
               <span className={clsx(
                 'font-semibold text-sm',
-                isRevenue ? 'text-emerald-400' : 'text-white'
+                isRevenue ? 'text-green-400' : 'text-white'
               )}>
                 {formatCurrency(bill.expected_amount)}
               </span>

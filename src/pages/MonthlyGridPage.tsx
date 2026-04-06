@@ -192,7 +192,7 @@ function TotalsRow({ label, totals, variant }: {
   variant: 'revenue' | 'expense' | 'net'
 }) {
   const textColor = variant === 'revenue'
-    ? 'text-emerald-400'
+    ? 'text-green-400'
     : variant === 'expense'
     ? 'text-red-400'
     : 'text-white'

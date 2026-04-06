@@ -69,8 +69,8 @@ export default function DashboardPage() {
               label="Receitas"
               value={formatCurrency(data?.totalRevenue ?? 0)}
               icon={TrendingUp}
-              color="text-emerald-400"
-              bg="bg-emerald-500/10"
+              color="text-green-400"
+              bg="bg-green-500/10"
             />
             <SummaryCard
               label="Despesas"

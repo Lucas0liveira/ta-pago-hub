@@ -542,7 +542,7 @@ function AppearanceSection() {
       <div>
         <p className="text-xs text-slate-500 mb-2">Cor de destaque</p>
         <div className="grid grid-cols-2 gap-2">
-          {ACCENT_OPTIONS.map(({ key, label, dot }) => (
+          {ACCENT_OPTIONS.map(({ key, label, color }) => (
             <button
               key={key}
               onClick={() => handleAccent(key)}
@@ -553,9 +553,10 @@ function AppearanceSection() {
                   : 'border-slate-700 text-slate-400 hover:text-white hover:border-slate-600'
               )}
             >
-              <div className={clsx('w-4 h-4 rounded-full shrink-0', dot)} />
+              {/* inline style so dot color is always the real fixed hex, unaffected by CSS var overrides */}
+              <div className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: color }} />
               <span className="text-xs font-medium">{label}</span>
-              {prefs.accent === key && <Check className="w-3.5 h-3.5 ml-auto text-emerald-400" />}
+              {prefs.accent === key && <Check className="w-3.5 h-3.5 ml-auto" style={{ color }} />}
             </button>
           ))}
         </div>
