@@ -4,14 +4,24 @@ import { supabase } from '../../lib/supabase'
 import { AuthContext } from '../../stores/authStore'
 import type { Profile, Household, FinancialProfile } from '../../types/database'
 
+const LS_KEY = 'activeFinancialProfileId'
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [household, setHousehold] = useState<Household | null>(null)
   const [financialProfiles, setFinancialProfiles] = useState<FinancialProfile[]>([])
-  const [activeFinancialProfileId, setActiveFinancialProfileId] = useState<string | null>(null)
+  const [activeFinancialProfileId, setActiveFinancialProfileIdState] = useState<string | null>(
+    () => localStorage.getItem(LS_KEY)
+  )
   const [loading, setLoading] = useState(true)
+
+  const setActiveFinancialProfileId = useCallback((id: string | null) => {
+    setActiveFinancialProfileIdState(id)
+    if (id) localStorage.setItem(LS_KEY, id)
+    else localStorage.removeItem(LS_KEY)
+  }, [])
 
   const loadUserData = useCallback(async (userId: string) => {
     const [profileRes, memberRes] = await Promise.all([
@@ -37,7 +47,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (fpRes.data && fpRes.data.length > 0) {
         setFinancialProfiles(fpRes.data)
-        setActiveFinancialProfileId((prev) => prev ?? fpRes.data[0].id)
+        // Only set to first profile if stored value isn't in the valid list
+        setActiveFinancialProfileIdState(prev => {
+          const valid = fpRes.data.find(fp => fp.id === prev)
+          if (valid) return prev
+          const id = fpRes.data[0].id
+          localStorage.setItem(LS_KEY, id)
+          return id
+        })
       }
     }
   }, [])
@@ -67,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
 
     return () => subscription.unsubscribe()
-  }, [loadUserData])
+  }, [loadUserData, setActiveFinancialProfileId])
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()

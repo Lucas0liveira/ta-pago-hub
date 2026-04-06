@@ -4,6 +4,7 @@ import { clsx } from 'clsx'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../stores/authStore'
+import { useCategories, useCreateCategory } from '../hooks/useBills'
 import { Modal } from '../components/ui/Modal'
 import { applyTheme, getStoredTheme, ACCENT_OPTIONS } from '../lib/theme'
 import type { ThemeMode, ThemeAccent } from '../lib/theme'
@@ -79,6 +80,11 @@ export default function SettingsPage() {
       {/* Financial Profiles */}
       <Section title="Perfis Financeiros" icon={Wallet}>
         <ProfilesSection financialProfiles={financialProfiles} household={household} />
+      </Section>
+
+      {/* Categories */}
+      <Section title="Categorias" icon={Wallet}>
+        <CategoriesSection />
       </Section>
 
       {/* Appearance */}
@@ -497,6 +503,126 @@ function FinancialProfileForm({ initial, onSave, onCancel }: {
         <SaveButton loading={saving} label={initial ? 'Salvar' : 'Criar'} />
       </div>
     </form>
+  )
+}
+
+// ─── Categories section ───────────────────────────────────────────────────────
+const CATEGORY_ICONS = ['🏠', '🚗', '🛒', '💡', '📱', '🎓', '🏥', '🍔', '✈️', '🏋️', '🏭', '📦', '💼', '🧾', '💰', '🌍']
+
+function CategoriesSection() {
+  const { data: categories = [], isLoading } = useCategories()
+  const createCategory = useCreateCategory()
+  const [newName, setNewName] = useState('')
+  const [newIcon, setNewIcon] = useState('📦')
+  const [isRevenue, setIsRevenue] = useState(false)
+  const [adding, setAdding] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const DEFAULT_NAMES = ['Fornecedor', 'Impostos']
+
+  async function handleAdd(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (!newName.trim()) { setError('Nome obrigatório.'); return }
+    setAdding(true)
+    try {
+      await createCategory.mutateAsync({
+        name: newName.trim(),
+        icon: newIcon,
+        color: null,
+        is_revenue: isRevenue,
+        sort_order: categories.length,
+      })
+      setNewName('')
+    } catch {
+      setError('Erro ao criar categoria.')
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  if (isLoading) return <div className="text-xs text-slate-500">Carregando...</div>
+
+  return (
+    <div className="space-y-4">
+      {/* Quick-add defaults if not yet created */}
+      {DEFAULT_NAMES.filter(n => !categories.find(c => c.name === n)).length > 0 && (
+        <div>
+          <p className="text-xs text-slate-500 mb-2">Adicionar categorias sugeridas</p>
+          <div className="flex flex-wrap gap-2">
+            {DEFAULT_NAMES.filter(n => !categories.find(c => c.name === n)).map(name => (
+              <button
+                key={name}
+                onClick={() => createCategory.mutateAsync({ name, icon: name === 'Fornecedor' ? '🏭' : '🧾', color: null, is_revenue: false, sort_order: categories.length })}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-slate-800 border border-dashed border-slate-600 text-slate-400 hover:text-white hover:border-slate-500 rounded-lg transition-colors"
+              >
+                <Plus className="w-3 h-3" />
+                {name === 'Fornecedor' ? '🏭' : '🧾'} {name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Existing categories */}
+      {categories.length > 0 && (
+        <div className="space-y-1.5">
+          {categories.map(c => (
+            <div key={c.id} className="flex items-center gap-3 px-3 py-2 bg-slate-800 rounded-lg border border-slate-700">
+              <span className="text-base leading-none">{c.icon ?? '📦'}</span>
+              <span className="text-sm text-white flex-1">{c.name}</span>
+              <span className="text-xs text-slate-500">{c.is_revenue ? 'Receita' : 'Despesa'}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add new */}
+      <form onSubmit={handleAdd} className="space-y-3 pt-2 border-t border-slate-800">
+        <p className="text-xs font-medium text-slate-400">Nova categoria</p>
+        <div className="flex gap-2">
+          <input
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            placeholder="Nome da categoria"
+            className="flex-1 px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+          />
+          <div className="flex rounded-lg border border-slate-700 overflow-hidden text-xs">
+            {[false, true].map(rev => (
+              <button
+                key={String(rev)}
+                type="button"
+                onClick={() => setIsRevenue(rev)}
+                className={clsx('px-2.5 py-1.5 transition-colors', isRevenue === rev ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white')}
+              >
+                {rev ? 'Receita' : 'Despesa'}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {CATEGORY_ICONS.map(ic => (
+            <button
+              key={ic}
+              type="button"
+              onClick={() => setNewIcon(ic)}
+              className={clsx('w-8 h-8 rounded-lg border text-base flex items-center justify-center transition-colors', newIcon === ic ? 'border-emerald-500 bg-emerald-500/10' : 'border-slate-700 hover:border-slate-500')}
+            >
+              {ic}
+            </button>
+          ))}
+        </div>
+        {error && <p className="text-xs text-red-400">{error}</p>}
+        <button
+          type="submit"
+          disabled={adding || !newName.trim()}
+          className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          {adding ? 'Criando...' : 'Criar categoria'}
+        </button>
+      </form>
+    </div>
   )
 }
 

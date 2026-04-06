@@ -110,6 +110,75 @@ export function useDeleteImport() {
   })
 }
 
+// Save all reconciliation changes for an import:
+// 1. Bulk-update matched_bill_entry_id / is_reconciled on bank_transactions
+// 2. Upsert bill_entries with actual_amount = sum of matched transaction amounts (per bill, month, year)
+export function useSaveReconciliation() {
+  const qc = useQueryClient()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: async ({
+      matches, // map: transactionId → { billId, billEntryId, amount, month, year }
+    }: {
+      importId: string
+      matches: Map<string, { billId: string; billEntryId: string | null; amount: number; month: number; year: number }>
+    }) => {
+      // 1. Collect all tx updates
+      const updates = Array.from(matches.entries()).map(([txId, m]) => ({
+        id: txId,
+        matched_bill_entry_id: m.billEntryId,
+        is_reconciled: m.billEntryId !== null,
+      }))
+
+      // Update each transaction (PostgREST doesn't support bulk update with different values per row)
+      for (const u of updates) {
+        const { error } = await supabase
+          .from('bank_transactions')
+          .update({ matched_bill_entry_id: u.matched_bill_entry_id, is_reconciled: u.is_reconciled })
+          .eq('id', u.id)
+        if (error) throw error
+      }
+
+      // 2. Aggregate totals: group by (billId, month, year)
+      const totals = new Map<string, { billId: string; month: number; year: number; total: number }>()
+      for (const [, m] of matches) {
+        if (!m.billId) continue
+        const key = `${m.billId}|${m.month}|${m.year}`
+        const existing = totals.get(key)
+        if (existing) {
+          existing.total += m.amount
+        } else {
+          totals.set(key, { billId: m.billId, month: m.month, year: m.year, total: m.amount })
+        }
+      }
+
+      // 3. Upsert bill_entries
+      for (const { billId, month, year, total } of totals.values()) {
+        const { error } = await supabase
+          .from('bill_entries')
+          .upsert(
+            {
+              bill_id: billId,
+              month,
+              year,
+              actual_amount: total,
+              status: 'paid',
+              paid_at: new Date().toISOString(),
+              paid_by: user?.id,
+            },
+            { onConflict: 'bill_id,month,year' }
+          )
+        if (error) throw error
+      }
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['bank_transactions', vars.importId] })
+      qc.invalidateQueries({ queryKey: ['bill_entries'] })
+    },
+  })
+}
+
 export function useMatchTransaction() {
   const qc = useQueryClient()
 

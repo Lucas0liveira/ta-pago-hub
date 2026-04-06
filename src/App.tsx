@@ -12,6 +12,7 @@ import PaymentSessionPage from './pages/PaymentSessionPage'
 import GoalsPage from './pages/GoalsPage'
 import ImportsPage from './pages/ImportsPage'
 import SettingsPage from './pages/SettingsPage'
+import ReconciliationPage from './pages/ReconciliationPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -39,6 +40,7 @@ export default function App() {
               <Route path="/pagamento/:sessionId" element={<PaymentSessionPage />} />
               <Route path="/metas" element={<GoalsPage />} />
               <Route path="/importar" element={<ImportsPage />} />
+              <Route path="/importar/:importId/reconciliar" element={<ReconciliationPage />} />
               <Route path="/configuracoes" element={<SettingsPage />} />
             </Route>
 
