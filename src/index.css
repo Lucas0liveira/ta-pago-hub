@@ -30,3 +30,50 @@
     @apply bg-slate-500;
   }
 }
+
+/* ── Light mode ────────────────────────────────────────────────────────────────
+   Inverts the slate scale so dark UI becomes light.
+   Tailwind v4 uses var(--color-*) in generated utilities → runtime-safe.
+   ─────────────────────────────────────────────────────────────────────────── */
+[data-mode="light"] {
+  --color-slate-950: oklch(100% 0 0);                  /* white  → body bg      */
+  --color-slate-900: oklch(98.4% .003 247.858);        /* slate-50  → card bg   */
+  --color-slate-800: oklch(96.8% .007 247.896);        /* slate-100 → input bg  */
+  --color-slate-700: oklch(92.9% .013 255.508);        /* slate-200 → borders   */
+  --color-slate-600: oklch(86.9% .022 252.894);        /* slate-300             */
+  --color-slate-500: oklch(70.4% .04  256.788);        /* slate-400             */
+  --color-slate-400: oklch(55.4% .046 257.417);        /* slate-500 → text muted */
+  --color-slate-300: oklch(44.6% .043 257.281);        /* slate-600             */
+  --color-slate-200: oklch(37.2% .044 257.287);        /* slate-700             */
+  --color-slate-100: oklch(20.8% .042 265.755);        /* slate-900 → main text */
+  /* text-white on dark buttons stays readable on colored bg */
+  --color-white:     oklch(20.8% .042 265.755);        /* slate-900             */
+  color-scheme: light;
+}
+
+[data-mode="light"] ::-webkit-scrollbar-track { background: oklch(96.8% .007 247.896); }
+[data-mode="light"] ::-webkit-scrollbar-thumb { background: oklch(86.9% .022 252.894); }
+
+/* ── Accent: Oceano (sky blue) ────────────────────────────────────────────── */
+[data-accent="ocean"] {
+  --color-emerald-300: oklch(82.8% .111 230.318);
+  --color-emerald-400: oklch(74.6% .16  232.661);
+  --color-emerald-500: oklch(68.5% .169 237.323);
+  --color-emerald-600: oklch(58.8% .158 241.966);
+}
+
+/* ── Accent: Rosa / Girly (pink) ─────────────────────────────────────────── */
+[data-accent="girly"] {
+  --color-emerald-300: oklch(82.3% .12  346.018);
+  --color-emerald-400: oklch(71.8% .202 349.761);
+  --color-emerald-500: oklch(65.6% .241 354.308);
+  --color-emerald-600: oklch(59.2% .249   0.584);
+}
+
+/* ── Accent: Royal (violet) ──────────────────────────────────────────────── */
+[data-accent="royal"] {
+  --color-emerald-300: oklch(81.1% .111 293.571);
+  --color-emerald-400: oklch(70.2% .183 290.735);
+  --color-emerald-500: oklch(60.6% .25  292.717);
+  --color-emerald-600: oklch(54.1% .281 293.009);
+}
