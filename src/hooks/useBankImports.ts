@@ -26,13 +26,24 @@ export function useBankTransactions(importId: string | null) {
     queryKey: ['bank_transactions', importId],
     enabled: !!importId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('bank_transactions')
-        .select('*')
-        .eq('import_id', importId!)
-        .order('date', { ascending: true })
-      if (error) throw error
-      return data as BankTransaction[]
+      // PostgREST default max-rows can truncate large imports.
+      // Use range() to explicitly page through all rows.
+      const PAGE = 1000
+      let all: BankTransaction[] = []
+      let from = 0
+      while (true) {
+        const { data, error } = await supabase
+          .from('bank_transactions')
+          .select('*')
+          .eq('import_id', importId!)
+          .order('date', { ascending: true })
+          .range(from, from + PAGE - 1)
+        if (error) throw error
+        all = all.concat(data as BankTransaction[])
+        if (!data || data.length < PAGE) break
+        from += PAGE
+      }
+      return all
     },
   })
 }
