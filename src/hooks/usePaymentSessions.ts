@@ -59,7 +59,6 @@ export function usePaymentSession(sessionId: string) {
         .eq('month', session.month)
         .eq('year', session.year)
         .in('bill_id', billIds)
-        .in('status', ['pending', 'overdue'])
 
       // For bills without entries, synthesize a pending entry
       const entryMap = new Map((entries ?? []).map(e => [e.bill_id, e]))
@@ -165,7 +164,27 @@ export function useMarkSessionItemPaid() {
       return entry
     },
     onSuccess: (_data, vars) => {
+      // Invalidate immediately so UI reflects the change without waiting for polling
       qc.invalidateQueries({ queryKey: ['payment_session', vars.sessionId] })
+    },
+    onMutate: async (vars) => {
+      // Optimistic update: flip the entry status in the cache right away
+      await qc.cancelQueries({ queryKey: ['payment_session', vars.sessionId] })
+      const prev = qc.getQueryData<{ session: any; items: any[] }>(['payment_session', vars.sessionId])
+      if (prev) {
+        qc.setQueryData(['payment_session', vars.sessionId], {
+          ...prev,
+          items: prev.items.map(item =>
+            item.bill.id === vars.billId
+              ? { ...item, entry: { ...item.entry, status: vars.paid ? 'paid' : 'pending', actual_amount: vars.amount } }
+              : item
+          ),
+        })
+      }
+      return { prev }
+    },
+    onError: (_err, vars, ctx: any) => {
+      if (ctx?.prev) qc.setQueryData(['payment_session', vars.sessionId], ctx.prev)
     },
   })
 }
