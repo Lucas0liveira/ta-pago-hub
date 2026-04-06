@@ -15,23 +15,19 @@ function detectFormat(headers: string[]): BankFormat {
   return 'generic'
 }
 
-function parseAmount(raw: string): { amount: number; type: 'credit' | 'debit' } {
+function parseBRAmount(raw: string): { amount: number; type: 'credit' | 'debit' } {
   const clean = raw.replace(/[R$\s.]/g, '').replace(',', '.')
   const num = parseFloat(clean)
   if (isNaN(num)) return { amount: 0, type: 'debit' }
   return { amount: Math.abs(num), type: num >= 0 ? 'credit' : 'debit' }
 }
 
-function parseDate(raw: string): string {
-  // DD/MM/YYYY → YYYY-MM-DD
-  const match = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
-  if (match) return `${match[3]}-${match[2]}-${match[1]}`
-  // YYYY-MM-DD passthrough
-  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
-  return raw
+function parseBRDate(str: string): string {
+  const [day, month, year] = str.trim().split('/')
+  return `${year}-${month}-${day}` // → "2026-03-01" (ISO, safe for new Date())
 }
 
-function parseCSVLine(line: string): string[] {
+function parseCSVLine(line: string, delimiter = ','): string[] {
   const result: string[] = []
   let current = ''
   let inQuotes = false
@@ -40,7 +36,7 @@ function parseCSVLine(line: string): string[] {
     const char = line[i]
     if (char === '"') {
       inQuotes = !inQuotes
-    } else if (char === ',' && !inQuotes) {
+    } else if (char === delimiter && !inQuotes) {
       result.push(current.trim())
       current = ''
     } else {
@@ -54,7 +50,7 @@ function parseCSVLine(line: string): string[] {
 export function parseCSV(content: string): RawTransaction[] {
   const lines = content.split('\n').filter(l => l.trim())
   if (lines.length < 2) return []
-
+  
   // Some banks add metadata before headers; find the header row
   let headerIdx = 0
   for (let i = 0; i < Math.min(10, lines.length); i++) {
@@ -64,14 +60,15 @@ export function parseCSV(content: string): RawTransaction[] {
       break
     }
   }
-
-  const headers = parseCSVLine(lines[headerIdx])
+  
+  const delimiter = lines[0].includes(';') ? ';' : ','
+  const headers = parseCSVLine(lines[headerIdx], delimiter)
   const format = detectFormat(headers)
   const rows = lines.slice(headerIdx + 1)
 
   return rows.flatMap(line => {
     if (!line.trim()) return []
-    const cols = parseCSVLine(line)
+    const cols = parseCSVLine(line, delimiter)
     const get = (idx: number) => cols[idx]?.trim() ?? ''
 
     try {
@@ -96,9 +93,9 @@ function parseRow(
       const dateCol = idx('data')
       const descCol = idx('título')
       const amtCol = idx('valor')
-      const { amount, type } = parseAmount(get(amtCol))
+      const { amount, type } = parseBRAmount(get(amtCol))
       return {
-        date: parseDate(get(dateCol)),
+        date: parseBRDate(get(dateCol)),
         description: get(descCol),
         amount,
         type,
@@ -113,7 +110,7 @@ function parseRow(
       const typeCol = idx('tipo')
       const rawType = get(typeCol).toLowerCase()
       return {
-        date: parseDate(get(dateCol)),
+        date: parseBRDate(get(dateCol)),
         description: get(descCol),
         amount: Math.abs(parseFloat(get(amtCol).replace(/[R$\s.]/g, '').replace(',', '.')) || 0),
         type: rawType.includes('créd') ? 'credit' : 'debit',
@@ -127,10 +124,10 @@ function parseRow(
       const amtCol = idx('valor') >= 0 ? idx('valor') : idx('amount')
 
       const rawAmt = get(amtCol)
-      const { amount, type } = parseAmount(rawAmt)
+      const { amount, type } = parseBRAmount(rawAmt)
 
       return {
-        date: parseDate(get(dateCol)),
+        date: parseBRDate(get(dateCol)),
         description: get(descCol),
         amount,
         type,
