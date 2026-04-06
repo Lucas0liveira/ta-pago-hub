@@ -2,6 +2,7 @@ import { Outlet, Navigate } from 'react-router-dom'
 import { useAuth } from '../../stores/authStore'
 import Sidebar from './Sidebar'
 import MobileNav from './MobileNav'
+import MobileProfileBar from './MobileProfileBar'
 
 export default function AppLayout() {
   const { user, loading } = useAuth()
@@ -17,21 +18,26 @@ export default function AppLayout() {
   if (!user) return <Navigate to="/auth/login" replace />
 
   return (
-    <div className="flex h-screen bg-slate-950 overflow-hidden">
+    <div className="flex h-[100dvh] bg-slate-950 overflow-hidden">
       {/* Sidebar — desktop only */}
       <div className="hidden lg:flex">
         <Sidebar />
       </div>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
-        {/* Page content */}
-        <div className="pb-20 lg:pb-0">
+      <main className="flex-1 flex flex-col overflow-hidden">
+        {/* Mobile profile bar */}
+        <div className="lg:hidden shrink-0">
+          <MobileProfileBar />
+        </div>
+
+        {/* Scrollable page content */}
+        <div className="flex-1 overflow-y-auto pb-16 lg:pb-0">
           <Outlet />
         </div>
       </main>
 
-      {/* Bottom nav — mobile only */}
+      {/* Bottom nav — mobile only, truly fixed */}
       <div className="lg:hidden">
         <MobileNav />
       </div>
