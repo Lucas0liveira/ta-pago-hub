@@ -1,0 +1,119 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+   TÁPAGO HUB — Centralized Theme / Palette
+   ══════════════════════════════════════════════════════════════════════════════
+
+   HOW TO ADD A NEW THEME
+   ─────────────────────
+   1. Copy one of the "Light mode" or "Dark mode" blocks below.
+   2. Change the [data-mode="..."] selector to your new mode name.
+   3. Tweak the oklch() values.
+   4. In src/lib/theme.ts, add your new mode to ThemeMode and ACCENT_OPTIONS.
+   5. In SettingsPage.tsx, add a button for the new mode.
+
+   HOW TO ADD A NEW ACCENT COLOR
+   ──────────────────────────────
+   1. Copy one of the [data-accent="..."] blocks below.
+   2. Pick new oklch() values (tip: use oklch.com to preview).
+   3. Add the key to ThemeAccent in src/lib/theme.ts and ACCENT_OPTIONS.
+
+   COLOR SCALE ANATOMY (dark mode default)
+   ────────────────────────────────────────
+   slate-950  body background          (darkest)
+   slate-900  card / panel background
+   slate-800  input / secondary panel
+   slate-700  borders, dividers
+   slate-600  strong borders
+   slate-500  placeholder, subtle text
+   slate-400  secondary / muted text
+   slate-300  body text
+   slate-200  strong body text
+   slate-100  headings, primary text   (lightest non-white)
+   white      button labels on colored backgrounds
+
+   In light mode the scale is re-mapped so the same utility classes
+   produce a light-first UI without any markup changes.
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── DARK MODE (default — no override needed, uses Tailwind's built-in slate) ─ */
+/*
+   This is the baseline. Tailwind's default slate-950 … slate-100 are used.
+   No CSS variables needed unless you want to tweak the dark palette.
+*/
+
+/* ── LIGHT MODE ────────────────────────────────────────────────────────────────
+   Remaps slate-950…slate-100 so the same component classes produce a light UI.
+
+   Contrast guide (WCAG AA requires 4.5:1 for text):
+   • 950 (body bg)   vs 900 (card bg)   — subtle separation
+   • 900 (card bg)   vs 800 (input bg)  — clearly different fields
+   • 700 (border)                       — visible dividers
+   • 100 (main text) on 900 (card bg)   — very high contrast
+   ─────────────────────────────────────────────────────────────────────────── */
+[data-mode="light"] {
+  --color-slate-950: oklch(97.5% .004 247.858);   /* near-white  → body bg   */
+  --color-slate-900: oklch(100%  0    0);          /* white       → card bg   */
+  --color-slate-800: oklch(93.5% .009 247.896);   /* light gray  → input bg  */
+  --color-slate-700: oklch(82%   .018 255.508);   /* medium-lt   → borders   */
+  --color-slate-600: oklch(68%   .025 252.894);   /* muted       → dividers  */
+  --color-slate-500: oklch(52%   .038 256.788);   /* gray        → subtitles */
+  --color-slate-400: oklch(40%   .040 257.417);   /* dark gray   → secondary */
+  --color-slate-300: oklch(30%   .042 257.281);   /* body text               */
+  --color-slate-200: oklch(22%   .043 257.287);   /* strong text             */
+  --color-slate-100: oklch(14%   .040 265.755);   /* headings / primary text */
+  --color-white:     oklch(100%  0    0);          /* button labels (on colored bg) */
+  color-scheme: light;
+}
+
+/* ── ACCENT: Verde / Default (emerald) ─────────────────────────────────────────
+   Uses Tailwind's built-in emerald — no overrides needed.
+   Key hex: #10b981 (emerald-500)
+   ─────────────────────────────────────────────────────────────────────────── */
+/* [data-accent="dark"] — no CSS needed, emerald is the default */
+
+/* ── ACCENT: Oceano (sky blue) ─────────────────────────────────────────────────
+   Remaps emerald-300…600 to sky-blue shades.
+   Key hex: #0ea5e9 (sky-500)
+   ─────────────────────────────────────────────────────────────────────────── */
+[data-accent="ocean"] {
+  --color-emerald-300: oklch(82.8% .111 230.318);
+  --color-emerald-400: oklch(74.6% .160 232.661);
+  --color-emerald-500: oklch(68.5% .169 237.323);
+  --color-emerald-600: oklch(58.8% .158 241.966);
+}
+
+/* ── ACCENT: Rosa / Girly (pink) ───────────────────────────────────────────────
+   Remaps emerald-300…600 to pink shades.
+   Key hex: #ec4899 (pink-500)
+   ─────────────────────────────────────────────────────────────────────────── */
+[data-accent="girly"] {
+  --color-emerald-300: oklch(82.3% .120 346.018);
+  --color-emerald-400: oklch(71.8% .202 349.761);
+  --color-emerald-500: oklch(65.6% .241 354.308);
+  --color-emerald-600: oklch(59.2% .249   0.584);
+}
+
+/* ── ACCENT: Royal (violet) ────────────────────────────────────────────────────
+   Remaps emerald-300…600 to violet shades.
+   Key hex: #8b5cf6 (violet-500)
+   ─────────────────────────────────────────────────────────────────────────── */
+[data-accent="royal"] {
+  --color-emerald-300: oklch(81.1% .111 293.571);
+  --color-emerald-400: oklch(70.2% .183 290.735);
+  --color-emerald-500: oklch(60.6% .250 292.717);
+  --color-emerald-600: oklch(54.1% .281 293.009);
+}
+
+/* ── TEMPLATE: New accent (copy & paste to add your own) ──────────────────────
+[data-accent="MY_ACCENT"] {
+  --color-emerald-300: oklch(/* 300-level shade * /);
+  --color-emerald-400: oklch(/* 400-level shade * /);
+  --color-emerald-500: oklch(/* 500-level shade * /);  ← primary interactive color
+  --color-emerald-600: oklch(/* 600-level shade * /);  ← hover state
+}
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* ── Scrollbar theming ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: var(--color-slate-900, #0f172a); }
+::-webkit-scrollbar-thumb  { background: var(--color-slate-700, #334155); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-slate-500, #64748b); }
