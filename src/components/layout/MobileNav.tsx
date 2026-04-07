@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Receipt, FileUp, CheckSquare, Settings } from 'lucide-react'
+import { LayoutDashboard, Receipt, FileUp, CheckSquare, BarChart2 } from 'lucide-react'
 import { clsx } from 'clsx'
 
 const navItems = [
@@ -7,7 +7,7 @@ const navItems = [
   { to: '/contas', icon: Receipt, label: 'Contas' },
   { to: '/pagamento', icon: CheckSquare, label: 'Pagar' },
   { to: '/importar', icon: FileUp, label: 'Importar' },
-  { to: '/configuracoes', icon: Settings, label: 'Config' },
+  { to: '/insights', icon: BarChart2, label: 'Insights' },
 ]
 
 export default function MobileNav() {

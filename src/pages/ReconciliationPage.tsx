@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, X, CheckCircle2, Save } from 'lucide-react'
 import { clsx } from 'clsx'
-import { useBankTransactions, useSaveReconciliation } from '../hooks/useBankImports'
+import { useBankTransactions, useSaveReconciliation, useDescriptionMappings, useSaveDescriptionMappings } from '../hooks/useBankImports'
 import { useBankImports } from '../hooks/useBankImports'
 import { useBills, useCategories, useCreateBill } from '../hooks/useBills'
 import { formatCurrency, formatDate } from '../lib/formatters'
@@ -115,7 +115,9 @@ export default function ReconciliationPage() {
   const { data: imports = [] } = useBankImports()
   const { data: transactions = [], isLoading } = useBankTransactions(importId ?? null)
   const { data: bills = [] } = useBills()
+  const { data: descriptionMappings = [] } = useDescriptionMappings()
   const saveReconciliation = useSaveReconciliation()
+  const saveDescriptionMappings = useSaveDescriptionMappings()
 
   // Local match state: txId → billId
   const [matches, setMatches] = useState<MatchMap>(() => {
@@ -123,15 +125,21 @@ export default function ReconciliationPage() {
     return m
   })
 
-  // Initialise matches from already-reconciled transactions (run once when data loads)
+  // Initialise matches from already-reconciled transactions and remembered description mappings.
+  // Runs once when both transactions and bills are loaded.
   const [initialised, setInitialised] = useState(false)
-  if (!initialised && transactions.length > 0) {
+  if (!initialised && transactions.length > 0 && bills.length > 0) {
+    const descMap = new Map(descriptionMappings.map(dm => [dm.description, dm.bill_id]))
     const m: MatchMap = new Map()
     for (const tx of transactions) {
       if (tx.is_reconciled && tx.matched_bill_entry_id) {
-        // We need billId; we'll resolve it later via bills list
-        // Store matched_bill_entry_id as a special sentinel and resolve after
         m.set(tx.id, `entry:${tx.matched_bill_entry_id}`)
+      } else if (!tx.is_reconciled && tx.type === 'debit') {
+        // Auto-apply remembered mapping if the bill still exists
+        const billId = descMap.get(tx.description)
+        if (billId && bills.find(b => b.id === billId)) {
+          m.set(tx.id, billId)
+        }
       }
     }
     setMatches(m)
@@ -206,6 +214,9 @@ export default function ReconciliationPage() {
     try {
       // Build the map the hook expects
       const matchData = new Map<string, { billId: string; billEntryId: string | null; amount: number; month: number; year: number }>()
+      // Also track description → billId for memory
+      const newMappings = new Map<string, string>() // description → billId
+
       for (const [txId, billId] of matches) {
         if (!billId || billId.startsWith('entry:')) continue
         const tx = debits.find(t => t.id === txId)
@@ -213,13 +224,23 @@ export default function ReconciliationPage() {
         const date = new Date(tx.date)
         matchData.set(txId, {
           billId,
-          billEntryId: null, // hook will upsert and create if needed
+          billEntryId: null,
           amount: tx.amount,
           month: date.getMonth() + 1,
           year: date.getFullYear(),
         })
+        newMappings.set(tx.description, billId)
       }
+
       await saveReconciliation.mutateAsync({ importId, matches: matchData })
+
+      // Persist description → bill mappings for future auto-reconciliation
+      if (newMappings.size > 0) {
+        await saveDescriptionMappings.mutateAsync(
+          Array.from(newMappings.entries()).map(([description, bill_id]) => ({ description, bill_id }))
+        )
+      }
+
       setSavedOk(true)
     } finally {
       setSaving(false)
@@ -311,6 +332,7 @@ export default function ReconciliationPage() {
         {groups.map(({ desc, txs, total }) => {
           const billId = getBillIdForGroup(desc)
           const linkedBill = billId ? bills?.find(b => b.id === billId) : null
+          const isAutoMatched = !!billId && descriptionMappings.some(dm => dm.description === desc && dm.bill_id === billId)
 
           return (
             <div
@@ -348,6 +370,9 @@ export default function ReconciliationPage() {
                   <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                     <span className="text-sm text-emerald-400 font-medium flex-1 truncate">{linkedBill.name}</span>
+                    {isAutoMatched && (
+                      <span className="text-xs text-slate-500 shrink-0">auto</span>
+                    )}
                     <button
                       onClick={() => setGroupBill(desc, '')}
                       className="text-slate-500 hover:text-white transition-colors"

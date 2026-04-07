@@ -9,6 +9,7 @@ import {
   Settings,
   LogOut,
   Wallet,
+  BarChart2,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAuth } from '../../stores/authStore'
@@ -20,6 +21,7 @@ const navItems = [
   { to: '/pagamento', icon: CheckSquare, label: 'Dia do Pagamento' },
   { to: '/metas', icon: Target, label: 'Metas' },
   { to: '/importar', icon: FileUp, label: 'Importar Extrato' },
+  { to: '/insights', icon: BarChart2, label: 'Insights' },
 ]
 
 export default function Sidebar() {

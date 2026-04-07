@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../stores/authStore'
-import type { BankImport, BankTransaction } from '../types/database'
+import type { BankImport, BankTransaction, DescriptionMapping } from '../types/database'
 
 export function useBankImports() {
   const { activeFinancialProfileId } = useAuth()
@@ -176,6 +176,46 @@ export function useSaveReconciliation() {
       qc.invalidateQueries({ queryKey: ['bank_transactions', vars.importId] })
       qc.invalidateQueries({ queryKey: ['bill_entries'] })
     },
+  })
+}
+
+// ─── Description mappings (reconciliation memory) ────────────────────────────
+
+export function useDescriptionMappings() {
+  const { activeFinancialProfileId } = useAuth()
+
+  return useQuery({
+    queryKey: ['description_mappings', activeFinancialProfileId],
+    enabled: !!activeFinancialProfileId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('description_mappings')
+        .select('*')
+        .eq('financial_profile_id', activeFinancialProfileId!)
+      if (error) throw error
+      return data as DescriptionMapping[]
+    },
+  })
+}
+
+export function useSaveDescriptionMappings() {
+  const qc = useQueryClient()
+  const { activeFinancialProfileId } = useAuth()
+
+  return useMutation({
+    mutationFn: async (mappings: { description: string; bill_id: string }[]) => {
+      if (!mappings.length) return
+      const rows = mappings.map(m => ({
+        financial_profile_id: activeFinancialProfileId!,
+        description: m.description,
+        bill_id: m.bill_id,
+      }))
+      const { error } = await supabase
+        .from('description_mappings')
+        .upsert(rows, { onConflict: 'financial_profile_id,description' })
+      if (error) throw error
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['description_mappings', activeFinancialProfileId] }),
   })
 }
 

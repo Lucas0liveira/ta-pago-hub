@@ -132,6 +132,14 @@ export interface BankTransaction {
   is_reconciled: boolean
 }
 
+export interface DescriptionMapping {
+  id: string
+  financial_profile_id: string
+  description: string
+  bill_id: string
+  created_at: string
+}
+
 // Extended types with joins
 export interface BillWithCategory extends Bill {
   category: Category | null
