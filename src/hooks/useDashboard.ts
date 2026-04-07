@@ -44,6 +44,8 @@ export function useDashboardData(month: number, year: number) {
       const catMap = new Map((categories ?? []).map(c => [c.id, c]))
 
       // --- Current month summary ---
+      // Use actual_amount only — 0 when no entry, not expected_amount,
+      // so this stays consistent with the monthly grid totals.
       const entryMap = new Map((currentEntries ?? []).map(e => [e.bill_id, e]))
 
       let totalRevenue = 0
@@ -53,7 +55,7 @@ export function useDashboardData(month: number, year: number) {
 
       for (const bill of bills) {
         const entry = entryMap.get(bill.id)
-        const amount = entry?.actual_amount ?? bill.expected_amount
+        const amount = entry?.actual_amount ?? 0
         if (bill.type === 'revenue') totalRevenue += amount
         else totalExpenses += amount
         if (entry?.status === 'paid') paidCount++
@@ -69,7 +71,7 @@ export function useDashboardData(month: number, year: number) {
         let rev = 0, exp = 0
         for (const bill of bills) {
           const entry = entryByBill.get(bill.id)
-          const amount = entry?.actual_amount ?? bill.expected_amount
+          const amount = entry?.actual_amount ?? 0
           if (bill.type === 'revenue') rev += amount
           else exp += amount
         }
@@ -80,7 +82,8 @@ export function useDashboardData(month: number, year: number) {
       const catTotals = new Map<string, number>()
       for (const bill of bills.filter(b => b.type === 'expense')) {
         const entry = entryMap.get(bill.id)
-        const amount = entry?.actual_amount ?? bill.expected_amount
+        const amount = entry?.actual_amount ?? 0
+        if (amount === 0) continue
         const key = bill.category_id ?? '__sem_categoria'
         catTotals.set(key, (catTotals.get(key) ?? 0) + amount)
       }
@@ -91,13 +94,14 @@ export function useDashboardData(month: number, year: number) {
         })
         .sort((a, b) => b.amount - a.amount)
 
-      // --- Bill size (top 5 expenses this month) ---
+      // --- Top 5 expenses this month (only bills with actual entries) ---
       const topExpenses = bills
         .filter(b => b.type === 'expense')
         .map(b => {
           const entry = entryMap.get(b.id)
-          return { name: b.name, amount: entry?.actual_amount ?? b.expected_amount }
+          return { name: b.name, amount: entry?.actual_amount ?? 0 }
         })
+        .filter(b => b.amount > 0)
         .sort((a, b) => b.amount - a.amount)
         .slice(0, 5)
 

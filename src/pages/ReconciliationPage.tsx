@@ -237,7 +237,7 @@ export default function ReconciliationPage() {
   const expenseBills = (bills ?? []).filter(b => b.type === 'expense')
 
   return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-6 pb-32">
+    <div className="max-w-3xl mx-auto p-4 sm:p-6 pb-40">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate('/importar')} className="p-2 text-slate-400 hover:text-white transition-colors">
@@ -381,7 +381,7 @@ export default function ReconciliationPage() {
       </div>
 
       {/* Floating save bar */}
-      <div className="fixed bottom-16 lg:bottom-0 left-0 right-0 px-4 pb-4 pt-3 bg-slate-950/90 backdrop-blur border-t border-slate-800">
+      <div className="fixed bottom-16 lg:bottom-0 left-0 lg:left-64 right-0 px-4 pb-4 pt-3 bg-slate-950/90 backdrop-blur border-t border-slate-800">
         <div className="max-w-3xl mx-auto flex items-center gap-4">
           {savedOk && (
             <div className="flex items-center gap-1.5 text-emerald-400 text-sm">
