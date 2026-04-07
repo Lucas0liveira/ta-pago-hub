@@ -105,7 +105,6 @@ export default function InsightsPage() {
               icon={TrendingUp}
               color="text-green-400"
               bg="bg-green-500/10"
-              positive={true}
             />
             <StatCard
               label="Despesa total"
@@ -114,7 +113,6 @@ export default function InsightsPage() {
               icon={TrendingDown}
               color="text-red-400"
               bg="bg-red-500/10"
-              positive={false}
             />
             <StatCard
               label={isBusiness ? 'Lucro líquido' : 'Saldo líquido'}
@@ -426,14 +424,13 @@ export default function InsightsPage() {
 }
 
 // ─── Stat card ────────────────────────────────────────────────────────────────
-function StatCard({ label, value, sub, icon: Icon, color, bg, positive }: {
+function StatCard({ label, value, sub, icon: Icon, color, bg }: {
   label: string
   value: string
   sub?: string
   icon: React.ElementType
   color: string
   bg: string
-  positive?: boolean
 }) {
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
