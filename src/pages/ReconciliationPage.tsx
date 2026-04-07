@@ -237,7 +237,8 @@ export default function ReconciliationPage() {
   const expenseBills = (bills ?? []).filter(b => b.type === 'expense')
 
   return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-6 pb-40">
+    <div className="flex flex-col min-h-full">
+    <div className="max-w-3xl mx-auto w-full p-4 sm:p-6 flex-1">
       {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => navigate('/importar')} className="p-2 text-slate-400 hover:text-white transition-colors">
@@ -380,26 +381,6 @@ export default function ReconciliationPage() {
         })}
       </div>
 
-      {/* Floating save bar */}
-      <div className="fixed bottom-16 lg:bottom-0 left-0 lg:left-64 right-0 px-4 pb-4 pt-3 bg-slate-950/90 backdrop-blur border-t border-slate-800">
-        <div className="max-w-3xl mx-auto flex items-center gap-4">
-          {savedOk && (
-            <div className="flex items-center gap-1.5 text-emerald-400 text-sm">
-              <CheckCircle2 className="w-4 h-4" />
-              Salvo
-            </div>
-          )}
-          <button
-            onClick={handleSave}
-            disabled={saving || billTotals.size === 0}
-            className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-white font-semibold rounded-xl text-sm transition-colors"
-          >
-            <Save className="w-4 h-4" />
-            {saving ? 'Salvando...' : `Salvar conciliação · ${reconciledGroups.length}/${groups.length}`}
-          </button>
-        </div>
-      </div>
-
       {/* Quick create modal */}
       {showCreateModal && (
         <QuickBillModal
@@ -411,6 +392,27 @@ export default function ReconciliationPage() {
           }}
         />
       )}
+    </div>
+
+    {/* Save bar — sticky inside the scroll container, full width, clears mobile nav */}
+    <div className="sticky bottom-16 lg:bottom-0 w-full px-4 pb-4 pt-3 bg-slate-950/90 backdrop-blur border-t border-slate-800">
+      <div className="max-w-3xl mx-auto flex items-center gap-4">
+        {savedOk && (
+          <div className="flex items-center gap-1.5 text-emerald-400 text-sm shrink-0">
+            <CheckCircle2 className="w-4 h-4" />
+            Salvo
+          </div>
+        )}
+        <button
+          onClick={handleSave}
+          disabled={saving || billTotals.size === 0}
+          className="flex-1 flex items-center justify-center gap-2 py-3 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-40 text-white font-semibold rounded-xl text-sm transition-colors"
+        >
+          <Save className="w-4 h-4" />
+          {saving ? 'Salvando...' : `Salvar conciliação · ${reconciledGroups.length}/${groups.length}`}
+        </button>
+      </div>
+    </div>
     </div>
   )
 }
